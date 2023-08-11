@@ -9,6 +9,7 @@ function extractVideoId(url) {
 
 const videoId = extractVideoId(window.location.href);
 let overlay; // Moved the overlay definition outside to make it globally accessible in the script.
+let captionsArray = [];
 
 if (videoId) {
   console.log(`Detected YouTube video ID: ${videoId}`);
@@ -41,8 +42,9 @@ if (videoId) {
       { action: "fetchCaptions", videoId: videoId },
       (response) => {
         if (response.success) {
-          console.log("First one: ", response.captions[0]);
           console.log("Successfully fetched captions:", response.captions);
+          captionsArray = response.captions;
+          updateCaption(); // Start the caption updater
         } else {
           console.error("Error fetching captions:", response.errorMessage);
         }
@@ -51,6 +53,25 @@ if (videoId) {
   }
 } else {
   console.error("Could not extract video ID from URL.");
+}
+
+function updateCaption() {
+  const video = document.querySelector("video");
+  if (video && captionsArray.length > 0) {
+    const currentTime = video.currentTime;
+
+    for (const caption of captionsArray) {
+      if (
+        currentTime >= parseFloat(caption.start) &&
+        currentTime <= parseFloat(caption.start) + parseFloat(caption.dur)
+      ) {
+        overlay.textContent = caption.text;
+        break;
+      }
+    }
+
+    requestAnimationFrame(updateCaption);
+  }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
